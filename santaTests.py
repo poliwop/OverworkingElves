@@ -15,9 +15,8 @@ def testFunction(function, cases):
 if __name__ == '__main__':
 
   print("Testing onMinToProd...")
-  caseList = [[[3,3],0], [[5,6],553], [[.25,4.0],8401], [[.5,1],2101],
-              [[.37,2.2],5402], [[1,5],4877], [[.1,2],9077]]
-  if testFunction(onMinToProd, caseList):
+
+  if testFunction(onMinToProd, onMinToProd_cases):
     print("Pass.")
   else:
     print("Fail.")

@@ -12,6 +12,63 @@ WORKFORCE = 900
 BIG_PROD = 2.0
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
+SANC_PROD_CHANGE = 1.02
+UNSANC_PROD_CHANGE = .9
+
+
+### New, Tested Methods ###
+
+'''
+def maxDur(available, day, desiredProd):
+  """
+  :param available: datetime earliest availability of elf
+  :param day: date current assignment day
+  :param desiredProd: float productivity level target
+  """
+  timeLeftToday = 0
+  startTimeToday = Elf.dayStart
+  if available.date() <= day:
+    if available.date() == day:
+      startTimeToday = available.time()
+    timeLeftToday = 
+    
+  return min(timeLeftToday( ), onMinToProd(startProd, endProd))
+'''
+
+
+
+def timeLeftToday(available, day):
+  """
+  :param available: datetime earliest availability of elf
+  :param day: date current assignment day
+  :return: int sanctioned time left
+  """
+  timeLeft = 0
+  dayStartToday = dt.datetime.combine(day, Elf.dayStart)
+  dayEndToday = dt.datetime.combine(day, Elf.dayEnd)
+  if available.date() <= day:
+    startTimeToday = dayStartToday
+    if available.date() == day:
+      startTimeToday = min(available, dayEndToday)
+      startTimeToday = max(startTimeToday, dayStartToday)
+    timeLeft = (dayEndToday - startTimeToday).total_seconds()/60.0
+    timeLeft = int(math.floor(timeLeft))
+  return timeLeft
+
+
+def onMinToProd(startProd, endProd):
+  """
+  :param startProd: float starting productivity level
+  :param endProd: float ending productivity level
+  :return: int number of sactioned minutes to go from startProd to endProd
+  """
+  startProd = float(startProd)
+  endProd = float(endProd)
+  onMinToProd = 60*math.log(endProd/startProd)/math.log(SANC_PROD_CHANGE)
+  return int(math.ceil(onMinToProd))
+
+
+
 
 # Methods for setup
 

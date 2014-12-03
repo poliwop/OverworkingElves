@@ -55,6 +55,26 @@ def timeLeftToday(available, day):
     timeLeft = int(math.floor(timeLeft))
   return timeLeft
 
+  timeLeftToday_cases = []
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,1,1,9,5),dt.date(2014,1,1)],595])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,1,1,14,0),dt.date(2014,1,1)],300])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,9,0),dt.date(2014,2,2)],600])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,19,0),dt.date(2014,2,2)],0])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,19,21),dt.date(2014,2,2)],0])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,8,20),dt.date(2014,2,2)],600])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,3,10,0),dt.date(2014,2,2)],0])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,10,0),dt.date(2014,2,3)],600])
+  timeLeftToday_cases.append(
+             [[dt.datetime(2014,2,2,21,0),dt.date(2014,2,3)],600])
+
 
 def onMinToProd(startProd, endProd):
   """

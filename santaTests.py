@@ -23,17 +23,8 @@ if __name__ == '__main__':
     print("Fail.")
 
   print("Testing timeLeftToday...")
-  caseList = []
-  caseList.append([[dt.datetime(2014,1,1,9,5),dt.date(2014,1,1)],595])
-  caseList.append([[dt.datetime(2014,1,1,14,0),dt.date(2014,1,1)],300])
-  caseList.append([[dt.datetime(2014,2,2,9,0),dt.date(2014,2,2)],600])
-  caseList.append([[dt.datetime(2014,2,2,19,0),dt.date(2014,2,2)],0])
-  caseList.append([[dt.datetime(2014,2,2,19,21),dt.date(2014,2,2)],0])
-  caseList.append([[dt.datetime(2014,2,2,8,20),dt.date(2014,2,2)],600])
-  caseList.append([[dt.datetime(2014,2,3,10,0),dt.date(2014,2,2)],0])
-  caseList.append([[dt.datetime(2014,2,2,10,0),dt.date(2014,2,3)],600])
-  caseList.append([[dt.datetime(2014,2,2,21,0),dt.date(2014,2,3)],600])
-  if testFunction(timeLeftToday, caseList):
+  
+  if testFunction(timeLeftToday, timeLeftToday_cases):
     print("Pass.")
   else:
     print("Fail.")

@@ -7,6 +7,8 @@ class Elf:
   dayEnd = dt.time(19,0)
   workHours = 10
   breakHours = 14
+  minProd = .25
+  maxProd = 4.0
 
   def __init__(self, ID):
     self.ID = ID
@@ -38,8 +40,8 @@ class Elf:
     onHours = onMins / 60.0
     offHours = offMins / 60.0
     newProd = self.prod * (1.02**onHours) * (.9**offHours)
-    newProd = min(newProd, 4.0)
-    self.prod = max(newProd, 0.25)
+    newProd = min(newProd, Elf.maxProd)
+    self.prod = max(newProd, Elf.minProd)
 
   def calcWorktimes(self, duration, startTime):
     workEnd = self.endOfDay(startTime.date())

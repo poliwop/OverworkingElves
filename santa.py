@@ -14,28 +14,32 @@ REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
 SANC_PROD_CHANGE = 1.02
 UNSANC_PROD_CHANGE = .9
+JOB_RATIO = 100.0
 
 
 ### New, Tested Methods ###
 
-'''
-def maxDur(available, day, desiredProd):
-  """
-  :param available: datetime earliest availability of elf
-  :param day: date current assignment day
-  :param desiredProd: float productivity level target
-  """
-  timeLeftToday = 0
-  startTimeToday = Elf.dayStart
-  if available.date() <= day:
-    if available.date() == day:
-      startTimeToday = available.time()
-    timeLeftToday = 
-    
-  return min(timeLeftToday( ), onMinToProd(startProd, endProd))
-'''
 
 
+
+def desiredProd(bigJob):
+  """
+  :param bigJob: int length in minutes of big job
+  :return: float productivity level which ensures performing
+           big job will approx. maintain the job ratio
+  """
+  return Elf.minProd*(SANC_PROD_CHANGE)**(bigJob/(60.0*JOB_RATIO))
+
+#Testing code
+#Must change if JOB_RATIO or SANC_PROD_CHANGE change
+desiredProd_cases=[]
+desiredProd_cases.append([[50000],.294854735])
+desiredProd_cases.append([[47470],.292402917])
+desiredProd_cases.append([[30001],.276021118])
+desiredProd_cases.append([[2001],.251656508])
+desiredProd_cases.append([[600],.250495556])
+desiredProd_cases.append([[150],.250123797])
+desiredProd_cases.append([[50],.250041259])
 
 def timeLeftToday(available, day):
   """
@@ -92,6 +96,7 @@ def onMinToProd(startProd, endProd):
   return int(math.ceil(onMinToProd))
 
 #Testing code
+#Must change if SANC_PROD_CHANGE changes
 onMinToProd_cases = [[[3,3],0], [[5,6],553], [[.25,4.0],8401], 
                     [[.5,1],2101], [[.37,2.2],5402], [[1,5],4877], 
                     [[.1,2],9077]]
@@ -203,8 +208,11 @@ def jobsInJobRange(jobslist, minimum = 0, maximum = 50000):
 def timeFromMin(prod):
   return int(math.ceil(math.log(4*prod)*60/math.log(1.02)))
 
+'''
+THIS FUNCTION HAS BEEN REPLACED
 def desiredProd(bigJobMins):
   return .25*(1.02**(bigJobMins/600.0))
+'''
 
 def optJobLength(desiredProd, prod):
   desiredIncrease = desiredProd/prod

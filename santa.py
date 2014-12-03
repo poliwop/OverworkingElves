@@ -8,7 +8,7 @@ from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
 solnFile = 'soln/submission.csv'
-WORKFORCE = 900
+WORKFORCE = 1
 BIG_PROD = 2.0
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -19,6 +19,97 @@ JOB_RATIO = 100.0
 
 ### New, Tested Methods ###
 
+
+
+def scheduleElfDay(elf, day, jobsList):
+  elfJobs = []
+  bigJob = len(jobsList) - 1
+  smallJobs = True
+  while (elf.available.date() <= day) and smallJobs :
+    if elf.prod >= desiredProd(bigJob):
+      assignJobToElf(elf, bigJob, elf.available, jobsList)
+    else:
+      smallJobs, job = assignSmallJob(elf, day, elf.available, jobsList)
+      if smallJobs:
+        elfJobs.append(job)
+  return elfJobs
+
+
+def assignSmallJob(elf, day, startTime, jobsList):
+  jobAssigned = False
+  bigJob = len(jobsList) - 1
+  prodTarget = onMinToProd(elf.prod, desiredProd(bigJob))
+  timeLeft = timeLeftToday(elf.available, day)
+  if prodTarget < timeLeft:
+    jobAssigned, job = assignJobMaxDur(elf, prodTarget, startTime, jobsList)
+    if jobAssigned:
+      return True, job
+  return assignJobMaxDur(elf, timeLeft, startTime, jobsList)
+
+
+def assignJobMaxDur(elf, maxDur, startTime, jobsList):
+  duration = maxDur
+  while jobsList[duration] == [] and duration > 0:
+    duration -= 1
+  if duration == 0:
+    return False, []
+  else:
+    job = assignJobToElf(elf, duration, startTime, jobsList)
+    return True, job
+
+
+def assignJobToElf(elf, duration, startTime, jobsList):
+  jobID = getJobFromList(jobsList, duration)[1]
+  elf.workJob(duration, startTime)
+  return [jobID, elf.ID, startTime, duration]
+
+
+def getJobFromList(jobsList, duration):
+  """ Takes the list of assignable jobs and a duration, selects
+  a job of required duration and removes it from the list, returning
+  the jobID.
+  :param jobsList: list of jobs to be assigned
+  :param duration: list of duration desired
+  :return: list of jobs with job removed, jobID or False
+  """
+  if len(jobsList) > duration and len(jobsList[duration]) > 0:
+    jobID = jobsList[duration].pop(0)
+    while len(jobsList) > 0 and len(jobsList[-1]) == 0:
+      jobsList.pop()
+    return [jobsList, jobID]
+  else:
+    return [jobsList, False]
+
+#Testing code
+def getJobFromList_cases():
+  cases=[]
+  jobs = []
+  durs = []
+  outs = []
+  jobs.append([[],[3,8,13498],[],[4,6,8,326,179],[],[],[],[1]])
+  durs.append(3)
+  outs.append([[[],[3,8,13498],[],[6,8,326,179],[],[],[],[1]],4]) 
+
+  jobs.append([[],[3,8,13498],[],[4,6,8,326,179],[],[],[],[1]])
+  durs.append(7)
+  outs.append([[[],[3,8,13498],[],[4,6,8,326,179]], 1])
+
+  jobs.append([[],[3,8,13498],[],[4,6,8,326,179],[],[],[],[1]])
+  durs.append(6)
+  outs.append([[[],[3,8,13498],[],[4,6,8,326,179],[],[],[],[1]], False])
+
+  jobs.append([[],[3],[],[4,6,8,326,179],[],[],[],[17,65]])
+  durs.append(7)
+  outs.append([[[],[3],[],[4,6,8,326,179],[],[],[],[65]], 17])
+
+  jobs.append([[],[],[3]])
+  durs.append(2)
+  outs.append([[], 3])
+  
+  for i in range(len(jobs)):
+    cases.append([[jobs[i],durs[i]], outs[i]])
+
+  return cases
 
 
 
@@ -32,14 +123,16 @@ def desiredProd(bigJob):
 
 #Testing code
 #Must change if JOB_RATIO or SANC_PROD_CHANGE change
-desiredProd_cases=[]
-desiredProd_cases.append([[50000],.294854735])
-desiredProd_cases.append([[47470],.292402917])
-desiredProd_cases.append([[30001],.276021118])
-desiredProd_cases.append([[2001],.251656508])
-desiredProd_cases.append([[600],.250495556])
-desiredProd_cases.append([[150],.250123797])
-desiredProd_cases.append([[50],.250041259])
+def desiredProd_cases():
+  cases=[]
+  cases.append([[50000],.294854735])
+  cases.append([[47470],.292402917])
+  cases.append([[30001],.276021118])
+  cases.append([[2001],.251656508])
+  cases.append([[600],.250495556])
+  cases.append([[150],.250123797])
+  cases.append([[50],.250041259])
+  return cases
 
 def timeLeftToday(available, day):
   """
@@ -60,26 +153,18 @@ def timeLeftToday(available, day):
   return timeLeft
 
 #Testing code
-timeLeftToday_cases = []
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,1,1,9,5),dt.date(2014,1,1)],595])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,1,1,14,0),dt.date(2014,1,1)],300])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,9,0),dt.date(2014,2,2)],600])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,19,0),dt.date(2014,2,2)],0])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,19,21),dt.date(2014,2,2)],0])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,8,20),dt.date(2014,2,2)],600])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,3,10,0),dt.date(2014,2,2)],0])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,10,0),dt.date(2014,2,3)],600])
-timeLeftToday_cases.append(
-             [[dt.datetime(2014,2,2,21,0),dt.date(2014,2,3)],600])
-
+def timeLeftToday_cases():
+  cases = []
+  cases.append([[dt.datetime(2014,1,1,9,5),dt.date(2014,1,1)],595])
+  cases.append([[dt.datetime(2014,1,1,14,0),dt.date(2014,1,1)],300])
+  cases.append([[dt.datetime(2014,2,2,9,0),dt.date(2014,2,2)],600])
+  cases.append([[dt.datetime(2014,2,2,19,0),dt.date(2014,2,2)],0])
+  cases.append([[dt.datetime(2014,2,2,19,21),dt.date(2014,2,2)],0])
+  cases.append([[dt.datetime(2014,2,2,8,20),dt.date(2014,2,2)],600])
+  cases.append([[dt.datetime(2014,2,3,10,0),dt.date(2014,2,2)],0])
+  cases.append([[dt.datetime(2014,2,2,10,0),dt.date(2014,2,3)],600])
+  cases.append([[dt.datetime(2014,2,2,21,0),dt.date(2014,2,3)],600])
+  return cases
 
 
 
@@ -97,9 +182,12 @@ def onMinToProd(startProd, endProd):
 
 #Testing code
 #Must change if SANC_PROD_CHANGE changes
-onMinToProd_cases = [[[3,3],0], [[5,6],553], [[.25,4.0],8401], 
-                    [[.5,1],2101], [[.37,2.2],5402], [[1,5],4877], 
-                    [[.1,2],9077]]
+def onMinToProd_cases():
+  return [[[3,3],0], [[5,6],553], [[.25,4.0],8401], [[.5,1],2101], 
+          [[.37,2.2],5402], [[1,5],4877], [[.1,2],9077]]
+
+
+
 
 
 # Methods for setup
@@ -122,19 +210,9 @@ def addJobToList(jobslist, jobID, duration):
     jobslist.append([])
   jobslist[duration].append(jobID)
 
-def getJobFromList(jobslist, duration):
-  if len(jobslist) > duration and len(jobslist[duration]) > 0:
-    jobID = jobslist[duration].pop(0)
-    while len(jobslist) > 0 and len(jobslist[-1]) == 0:
-      jobslist.pop()
-    return jobID
-  else:
-    return False
 
-def assignJobToElf(elf, duration, startTime, jobslist):
-  jobID = getJobFromList(jobslist, duration)
-  elf.workJob(duration, startTime)
-  return [jobID, elf.ID, startTime, duration]
+
+'''
 
 def scheduleElfDay(elf, jobs, date):
   elfJobs = []
@@ -142,13 +220,13 @@ def scheduleElfDay(elf, jobs, date):
   if elf.available.date() < date:
     elf.available = elf.startOfDay(date)
   if elf.available < elf.endOfDay(date):
-    '''
+
     if bigJob > 150 and timeFromMin(elf.prod)*10 >= bigJob:
       job = assignJobToElf(elf, bigJob, elf.available, jobs)
       elfJobs.append(job)
 
     else:
-    '''
+
     bestDuration = min(getBestDuration(elf, date, bigJob), len(jobs) - 1)
 #    print(bestDuration)
     while bestDuration > 0:
@@ -164,6 +242,7 @@ def scheduleElfDay(elf, jobs, date):
       else:
         bestDuration -= 1
   return elfJobs
+
 
 #def getBestDuration(elf, date):
 #  todayEnd = dt.datetime.combine(date, Elf.dayEnd)
@@ -182,7 +261,7 @@ def getBestDuration(elf, date, bigJob):
     return int(math.floor(timeOptimal*elf.prod))
   else:
     return bigJob
-
+'''
 
 def formatSolnRow(row):
   formatted = row
@@ -212,7 +291,7 @@ def timeFromMin(prod):
 THIS FUNCTION HAS BEEN REPLACED
 def desiredProd(bigJobMins):
   return .25*(1.02**(bigJobMins/600.0))
-'''
+
 
 def optJobLength(desiredProd, prod):
   desiredIncrease = desiredProd/prod
@@ -220,6 +299,8 @@ def optJobLength(desiredProd, prod):
 #  print(desiredIncrease)
   #print(int(math.floor(optHours*60.0)))
   return int(math.ceil(optHours*60.0))
+'''
+
 
 #Setup
 
@@ -268,8 +349,8 @@ if __name__ == '__main__':
       yearJobs = 0
       totalJobs = 0
 
-      while len(jobslist) > 0:
-
+#      while len(jobslist) > 0:
+      while len(jobslist) > 0 and currentDate < dt.date(2020,1,1):
         if currentDate.day == 1:
           if currentDate.month == 1:
             print("Happy " + str(currentDate.year) + "!")
@@ -284,7 +365,7 @@ if __name__ == '__main__':
 
         dayAssignment = []
         for elf in elves:
-          dayAssignment.extend(scheduleElfDay(elf, jobslist, currentDate))
+          dayAssignment.extend(scheduleElfDay(elf, currentDate, jobslist))
         dayAssignment = sorted(dayAssignment, key=itemgetter(2))
         yearJobs += len(dayAssignment)
         totalJobs += len(dayAssignment)
@@ -298,7 +379,7 @@ if __name__ == '__main__':
       print("LastDateTime:")
       print(lastDateTime)
       print("Score:")
-      print(totalMins * math.log(len(elves)))
+      print(totalMins * math.log(len(elves) + 1))
 
 
   #time1 = dt.datetime(2014,1,1,10,0)

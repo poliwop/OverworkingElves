@@ -10,10 +10,10 @@ class Elf:
   minProd = .25
   maxProd = 4.0
 
-  def __init__(self, ID):
+  def __init__(self, ID, avail = dt.datetime(2014,1,1,9,0)):
     self.ID = ID
     self.prod = 1.0
-    self.available = dt.datetime(2014,1,1,9,0)
+    self.available = avail
 
   def workJob(self, duration, startTime):
     if startTime < self.available or startTime > self.endOfDay(startTime.date()):
@@ -29,12 +29,19 @@ class Elf:
     endTime = addTime(duration, startTime)
     nextAvailable = endTime
     if endTime >= self.endOfDay(startTime.date()):
-      daysToAdd = 1 + offMins // 600
+      nextAvailable = self.nextMorning(endTime)
+      daysToAdd = offMins // 600
       minsToAdd = offMins % 600
       nextAvailable += dt.timedelta(days = daysToAdd)
       nextAvailable = self.startOfDay(nextAvailable.date())
       nextAvailable += dt.timedelta(minutes = minsToAdd)
     self.available = nextAvailable
+
+  def nextMorning(self, fromTime):
+    morning = dt.datetime.combine(fromTime.date(), Elf.dayStart)
+    if fromTime > morning:
+      morning = morning + dt.timedelta(days = 1)
+    return morning
 
   def adjustProductivity(self, onMins, offMins):
     onHours = onMins / 60.0

@@ -8,7 +8,7 @@ from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
 solnFile = 'soln/submission.csv'
-WORKFORCE = 1
+WORKFORCE = 900
 BIG_PROD = 2.0
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -25,43 +25,67 @@ def scheduleElfDay(elf, day, jobsList):
   elfJobs = []
   bigJob = len(jobsList) - 1
   smallJobs = True
-  while (elf.available.date() <= day) and smallJobs :
-    if elf.prod >= desiredProd(bigJob):
-      assignJobToElf(elf, bigJob, elf.available, jobsList)
+  while (elf.available.date() <= day) and smallJobs and jobsList != []:
+    startTime = startTimeToday(elf.available, day)
+    if bigJob > 2400 and elf.prod >= desiredProd(bigJob):
+      job = assignJobToElf(elf, bigJob, startTime, jobsList)
+      elfJobs.append(job)
     else:
-      smallJobs, job = assignSmallJob(elf, day, elf.available, jobsList)
+      timeLeft = timeLeftToday(elf.available, day)
+      smallJobs, duration = calcDurFromMaxDur(elf, timeLeft, jobsList)
       if smallJobs:
+        job = assignJobToElf(elf, duration, startTime, jobsList)
         elfJobs.append(job)
   return elfJobs
 
+def startTimeToday(availTime, day):
+  if availTime.date() >= day:
+    return availTime
+  else:
+    return dt.datetime.combine(day, Elf.dayStart)
 
-def assignSmallJob(elf, day, startTime, jobsList):
-  jobAssigned = False
+'''
+def calcSmallDuration(elf, day, jobsList):
+#  jobAssigned = False
   bigJob = len(jobsList) - 1
   prodTarget = onMinToProd(elf.prod, desiredProd(bigJob))
   timeLeft = timeLeftToday(elf.available, day)
+  maxDur = min(prodTarget, timeLeft)
   if prodTarget < timeLeft:
-    jobAssigned, job = assignJobMaxDur(elf, prodTarget, startTime, jobsList)
-    if jobAssigned:
-      return True, job
+    duration = calcDurFromMaxDur(elf, prodTarget, jobslist)
+    
+#    jobAssigned, job = assignJobMaxDur(elf, prodTarget, startTime, jobsList)
+#    if jobAssigned:
+#      return True, job
   return assignJobMaxDur(elf, timeLeft, startTime, jobsList)
+'''
 
-
-def assignJobMaxDur(elf, maxDur, startTime, jobsList):
-  duration = maxDur
-  while jobsList[duration] == [] and duration > 0:
+def calcDurFromMaxDur(elf, maxDur, jobsList):
+  duration = int(math.floor(maxDur*elf.prod))
+  duration = min(duration, len(jobsList) - 1)
+  while duration > 0 and jobsList[duration] == []:
     duration -= 1
   if duration == 0:
-    return False, []
+    return False, 0
   else:
-    job = assignJobToElf(elf, duration, startTime, jobsList)
-    return True, job
+    return True, duration
 
+#Testing code
+'''
+def assignJobMaxDur_cases():
+  cases=[]
+  elf = Elf(1, dt.datetime(2015,1,1,9,0))
+  jobsList = [[],[],[],[],[],[1,2,3],[],[],[4,5],[],[],[],[],[],[6]]
+  inpu = []
+  outpu = []
+  inpu.append([elf, 10, 
+'''
 
 def assignJobToElf(elf, duration, startTime, jobsList):
   jobID = getJobFromList(jobsList, duration)[1]
+  realDur = int(math.ceil(duration/elf.prod))
   elf.workJob(duration, startTime)
-  return [jobID, elf.ID, startTime, duration]
+  return [jobID, elf.ID, startTime, realDur]
 
 
 def getJobFromList(jobsList, duration):
@@ -72,7 +96,7 @@ def getJobFromList(jobsList, duration):
   :param duration: list of duration desired
   :return: list of jobs with job removed, jobID or False
   """
-  if len(jobsList) > duration and len(jobsList[duration]) > 0:
+  if duration >= 0 and len(jobsList) > duration and len(jobsList[duration]) > 0:
     jobID = jobsList[duration].pop(0)
     while len(jobsList) > 0 and len(jobsList[-1]) == 0:
       jobsList.pop()
@@ -105,6 +129,10 @@ def getJobFromList_cases():
   jobs.append([[],[],[3]])
   durs.append(2)
   outs.append([[], 3])
+
+  jobs.append([[],[],[3]])
+  durs.append(0)
+  outs.append([[[], [], [3]], False])
   
   for i in range(len(jobs)):
     cases.append([[jobs[i],durs[i]], outs[i]])
@@ -119,7 +147,10 @@ def desiredProd(bigJob):
   :return: float productivity level which ensures performing
            big job will approx. maintain the job ratio
   """
-  return Elf.minProd*(SANC_PROD_CHANGE)**(bigJob/(60.0*JOB_RATIO))
+  dProd = Elf.maxProd
+  if JOB_RATIO > 0:
+    dProd = Elf.minProd*(SANC_PROD_CHANGE)**(bigJob/(60.0*JOB_RATIO))
+  return min(Elf.maxProd, dProd)
 
 #Testing code
 #Must change if JOB_RATIO or SANC_PROD_CHANGE change
@@ -287,6 +318,12 @@ def jobsInJobRange(jobslist, minimum = 0, maximum = 50000):
 def timeFromMin(prod):
   return int(math.ceil(math.log(4*prod)*60/math.log(1.02)))
 
+def getShortestJob(jobsList):
+  dur = 0
+  while jobsList[dur] == []:
+    dur += 1
+  return dur
+
 '''
 THIS FUNCTION HAS BEEN REPLACED
 def desiredProd(bigJobMins):
@@ -315,7 +352,7 @@ if __name__ == '__main__':
 # Elf list setup
   elves = []
   for i in range(WORKFORCE):
-    elves.append(Elf(i + 1))
+    elves.append(Elf(i + 1, dt.datetime(2014,12,11,9,0)))
 
 
   with open(toyFile, 'rb') as f:
@@ -327,12 +364,16 @@ if __name__ == '__main__':
       addJobToList(jobslist, int(toy[0]), int(toy[2]))
     print("Done.")
 
-    print("Minutes in jobs at least 151 long:")
-    print(minutesInJobRange(jobslist, minimum = 151))
-    print("Minutes in jobs at most 150 long:")
-    print(minutesInJobRange(jobslist, maximum = 151))
-    print("jobs at least 151 long:")
-    print(jobsInJobRange(jobslist, minimum = 151))
+    print("Minutes in jobs at least 2401 long:")
+    bigMins = minutesInJobRange(jobslist, minimum = 2401)
+    print(bigMins)
+    print("Minutes in jobs at most 2400 long:")
+    smallMins = minutesInJobRange(jobslist, maximum = 2401)
+    print(smallMins)
+    JOB_RATIO = float(bigMins)/(smallMins*.95)
+
+    print("jobs at least 2401 long:")
+    print(jobsInJobRange(jobslist, minimum = 2401))
     print("jobs at most 150 long:")
     print(jobsInJobRange(jobslist, maximum = 151))
 
@@ -349,8 +390,8 @@ if __name__ == '__main__':
       yearJobs = 0
       totalJobs = 0
 
-#      while len(jobslist) > 0:
-      while len(jobslist) > 0 and currentDate < dt.date(2020,1,1):
+      while len(jobslist) > 0:
+#      while len(jobslist) > 0 and currentDate < dt.date(2020,1,1):
         if currentDate.day == 1:
           if currentDate.month == 1:
             print("Happy " + str(currentDate.year) + "!")
@@ -359,9 +400,18 @@ if __name__ == '__main__':
               print("You should let less productive elves work overtime.")
               break
             yearJobs = 0
-          print(currentDate.strftime("%B") + "...")
-          print("Jobs done: " + str(totalJobs))
-          print("Longest job left: " + str(len(jobslist)))
+            print("Jobs done: " + str(totalJobs))
+            print("Longest job left: " + str(len(jobslist) - 1))
+            print("Shortest job left: " + str(getShortestJob(jobslist)))
+            print("Minutes in jobs at least 2401 long:")
+            bigMins = minutesInJobRange(jobslist, minimum = 2401)
+            print(bigMins)
+            print("Minutes in jobs at most 150 long:")
+            smallMins = minutesInJobRange(jobslist, maximum = 151)
+            print(smallMins)
+            JOB_RATIO = float(bigMins)/(smallMins)
+#          print(currentDate.strftime("%B") + "...")
+
 
         dayAssignment = []
         for elf in elves:
@@ -372,7 +422,8 @@ if __name__ == '__main__':
         if len(dayAssignment) > 0:
           lastDateTime = dayAssignment[-1][2]
           for job in dayAssignment:
-            solnWriter.writerow(formatSolnRow(job))
+            if not(job == []):
+              solnWriter.writerow(formatSolnRow(job))
         currentDate = currentDate + dt.timedelta(days = 1)
 
       totalMins = int((lastDateTime - REF_DT).total_seconds() / 60)

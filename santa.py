@@ -7,14 +7,15 @@ import csv as csv
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/submission.csv'
+solnFile = 'soln/submission002.csv'
 WORKFORCE = 900
-BIG_PROD = 2.0
+BIG_PROD = .30
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
 SANC_PROD_CHANGE = 1.02
 UNSANC_PROD_CHANGE = .9
 JOB_RATIO = 100.0
+BOOST = 1.08
 
 
 ### New, Tested Methods ###
@@ -25,17 +26,38 @@ def scheduleElfDay(elf, day, jobsList):
   elfJobs = []
   bigJob = len(jobsList) - 1
   smallJobs = True
-  while (elf.available.date() <= day) and smallJobs and jobsList != []:
-    startTime = startTimeToday(elf.available, day)
-    if bigJob > 2400 and elf.prod >= desiredProd(bigJob):
-      job = assignJobToElf(elf, bigJob, startTime, jobsList)
+
+  #Bigjob phase
+  if bigJob > int(math.floor(2400/.85)) and getShortestJob(jobsList) <= 150:
+    while (elf.available.date() <= day) and smallJobs and jobsList != []:
+      startTime = startTimeToday(elf.available, day)
+#    if bigJob > 2400 and elf.prod >= BIG_PROD:
+      if elf.prod >= desiredProd(bigJob)*BOOST:
+        job = assignJobToElf(elf, bigJob, startTime, jobsList)
+        elfJobs.append(job)
+      else:
+        timeLeft = timeLeftToday(elf.available, day)
+        smallJobs, duration = calcDurFromMaxDur(elf, timeLeft, jobsList)
+        if smallJobs:
+          job = assignJobToElf(elf, duration, startTime, jobsList)
+          elfJobs.append(job)
+  #Do shortest jobs first
+  elif bigJob > int(math.floor(2400/.85)):
+    while (elf.available.date() <= day) and jobsList != []:
+      startTime = startTimeToday(elf.available, day)
+      sj = getShortestJob(jobsList)
+      job = assignJobToElf(elf, sj, startTime, jobsList)
       elfJobs.append(job)
-    else:
+  #Raise productivity to 4.0
+  else:
+    while (elf.available.date() <= day) and jobsList != [] and smallJobs:
+      startTime = startTimeToday(elf.available, day)
       timeLeft = timeLeftToday(elf.available, day)
-      smallJobs, duration = calcDurFromMaxDur(elf, timeLeft, jobsList)
+      maxDur = int(math.ceil(timeLeft/.841))
+      smallJobs, duration = calcDurFromMaxDur(elf, maxDur, jobsList)
       if smallJobs:
         job = assignJobToElf(elf, duration, startTime, jobsList)
-        elfJobs.append(job)
+        elfJobs.append(job)        
   return elfJobs
 
 def startTimeToday(availTime, day):
@@ -43,6 +65,7 @@ def startTimeToday(availTime, day):
     return availTime
   else:
     return dt.datetime.combine(day, Elf.dayStart)
+
 
 '''
 def calcSmallDuration(elf, day, jobsList):
@@ -58,7 +81,7 @@ def calcSmallDuration(elf, day, jobsList):
 #    if jobAssigned:
 #      return True, job
   return assignJobMaxDur(elf, timeLeft, startTime, jobsList)
-'''
+  '''
 
 def calcDurFromMaxDur(elf, maxDur, jobsList):
   duration = int(math.floor(maxDur*elf.prod))
@@ -141,6 +164,7 @@ def getJobFromList_cases():
 
 
 
+
 def desiredProd(bigJob):
   """
   :param bigJob: int length in minutes of big job
@@ -164,6 +188,9 @@ def desiredProd_cases():
   cases.append([[150],.250123797])
   cases.append([[50],.250041259])
   return cases
+
+
+
 
 def timeLeftToday(available, day):
   """
@@ -363,6 +390,7 @@ if __name__ == '__main__':
     for toy in toyReader:
       addJobToList(jobslist, int(toy[0]), int(toy[2]))
     print("Done.")
+    shortestJob = getShortestJob(jobslist)
 
     print("Minutes in jobs at least 2401 long:")
     bigMins = minutesInJobRange(jobslist, minimum = 2401)
@@ -370,7 +398,7 @@ if __name__ == '__main__':
     print("Minutes in jobs at most 2400 long:")
     smallMins = minutesInJobRange(jobslist, maximum = 2401)
     print(smallMins)
-    JOB_RATIO = float(bigMins)/(smallMins*.95)
+    JOB_RATIO = float(bigMins)/(smallMins)
 
     print("jobs at least 2401 long:")
     print(jobsInJobRange(jobslist, minimum = 2401))
@@ -409,7 +437,10 @@ if __name__ == '__main__':
             print("Minutes in jobs at most 150 long:")
             smallMins = minutesInJobRange(jobslist, maximum = 151)
             print(smallMins)
-            JOB_RATIO = float(bigMins)/(smallMins)
+            if smallMins > 0:
+              JOB_RATIO = float(bigMins)/(smallMins)
+            else:
+              JOB_RATIO = 1000000.0
 #          print(currentDate.strftime("%B") + "...")
 
 

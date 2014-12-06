@@ -1,12 +1,9 @@
 from santaUtil import *
+from WorkHours import *
 
 
 class Elf:
 
-  dayStart = dt.time(9,0)
-  dayEnd = dt.time(19,0)
-  workHours = 10
-  breakHours = 14
   minProd = .25
   maxProd = 4.0
 
@@ -43,12 +40,7 @@ class Elf:
       morning = morning + dt.timedelta(days = 1)
     return morning
 
-  def adjustProductivity(self, onMins, offMins):
-    onHours = onMins / 60.0
-    offHours = offMins / 60.0
-    newProd = self.prod * (1.02**onHours) * (.9**offHours)
-    newProd = min(newProd, Elf.maxProd)
-    self.prod = max(newProd, Elf.minProd)
+
 
   def calcWorktimes(self, duration, startTime):
     workEnd = self.endOfDay(startTime.date())
@@ -72,11 +64,12 @@ class Elf:
         timeLeft = 0
       return [onMins, offMins]
 
-  def startOfDay(self, day):
-    return self.timeOnDay(day, Elf.dayStart)
 
-  def endOfDay(self, day):
-    return self.timeOnDay(day, Elf.dayEnd)
+  def adjustProductivity(self, onMins, offMins):
+    onHours = onMins / 60.0
+    offHours = offMins / 60.0
+    newProd = self.prod * (1.02**onHours) * (.9**offHours)
+    newProd = min(newProd, Elf.maxProd)
+    self.prod = max(newProd, Elf.minProd)
 
-  def timeOnDay(self, day, time):
-    return dt.datetime.combine(day, time)
+

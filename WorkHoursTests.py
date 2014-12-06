@@ -12,6 +12,25 @@ def test_endOfDay():
   cases.append([[dt.date(2015,1,1)],dt.datetime(2015,1,1,19,0)])
   testFunction(WorkHours.endOfDay, cases)
 
+def test_onSameDay():
+  cases = []
+  #same date
+  cases.append([[dt.datetime(2014,1,1,9,0),
+                 dt.datetime(2014,1,1,9,5)],True])
+  #different date
+  cases.append([[dt.datetime(2014,1,2,9,0),
+                 dt.datetime(2014,1,1,9,5)],False])
+  #one midnight
+  cases.append([[dt.datetime(2014,1,1,9,0),
+                 dt.datetime(2014,1,2,0,0)],True])
+  #two midnights, same date
+  cases.append([[dt.datetime(2014,1,1,0,0),
+                 dt.datetime(2014,1,2,0,0)],True])
+  #two midnights, different date
+  cases.append([[dt.datetime(2014,1,1,0,0),
+                 dt.datetime(2014,1,3,0,0)],False])
+  testFunction(WorkHours.onSameDay, cases)
+
 def test_timeIntIntersection():
   cases = []
 
@@ -71,11 +90,52 @@ def test_timeIntIntersection():
   d = dt.datetime(2015, 1, 1, 20, 5)
   cases.append([[a, b, c, d], -1])
 
+  #Ending at midnight
+  a = dt.datetime(2015, 1, 1, 10, 0)
+  b = dt.datetime(2015, 1, 2, 0, 0)
+  c = dt.datetime(2015, 1, 1, 9, 0)
+  d = dt.datetime(2015, 1, 1, 19, 0)
+  cases.append([[a, b, c, d], 9*60])
+
+  #All day
+  a = dt.datetime(2015, 1, 1, 0, 0)
+  b = dt.datetime(2015, 1, 2, 0, 0)
+  c = dt.datetime(2015, 1, 1, 9, 0)
+  d = dt.datetime(2015, 1, 1, 19, 0)
+  cases.append([[a, b, c, d], 600])
+
   testFunction(WorkHours.timeIntIntersection, cases)
 
+
+def test_getDayOnMinutes():
+  cases = []
+
+  #All day
+  a = dt.datetime(2015, 1, 1, 0, 0)
+  b = dt.datetime(2015, 1, 2, 0, 0)
+  cases.append([[a, b], 600])
+
+  #start during day
+  a = dt.datetime(2015, 1, 1, 11, 23)
+  b = dt.datetime(2015, 1, 1, 20, 0)
+  cases.append([[a, b], 7*60 + 37])
+
+  #end during day
+  a = dt.datetime(2015, 1, 1, 1, 0)
+  b = dt.datetime(2015, 1, 1, 17, 0)
+  cases.append([[a, b], 8*60])
+
+  #all onHours
+  a = dt.datetime(2015, 1, 1, 2, 0)
+  b = dt.datetime(2015, 1, 1, 21, 0)
+  cases.append([[a, b], 600])
+
+  testFunction(WorkHours.getDayOnMinutes, cases)
 
 if __name__ == '__main__':
 
   test_startOfDay()
   test_endOfDay()
+  test_onSameDay()
   test_timeIntIntersection()
+  test_getDayOnMinutes()

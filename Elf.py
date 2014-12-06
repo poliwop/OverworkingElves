@@ -6,6 +6,8 @@ class Elf:
 
   minProd = .25
   maxProd = 4.0
+  prodIncRate = 1.02
+  prodDecRate = .9
 
   def __init__(self, ID, avail = dt.datetime(2014,1,1,9,0)):
     self.ID = ID
@@ -13,10 +15,10 @@ class Elf:
     self.available = avail
 
   def workJob(self, duration, startTime):
-    if startTime < self.available or startTime > self.endOfDay(startTime.date()):
+    if startTime < self.available or startTime > WorkHours.endOfDay(startTime.date()):
       return False
     jobTime = actualDuration(duration, self.prod)
-    [onMins, offMins] = self.calcWorktimes(jobTime, startTime)
+    [onMins, offMins] = self.getWorktimes(jobTime, startTime)
     self.adjustAvailability(onMins, offMins, startTime)
     self.adjustProductivity(onMins, offMins)
     return True
@@ -42,33 +44,19 @@ class Elf:
 
 
 
-  def calcWorktimes(self, duration, startTime):
-    workEnd = self.endOfDay(startTime.date())
-    jobEnd = addTime(duration, startTime)
-    if jobEnd <= workEnd:
-      return [duration, 0]
-    else:
-      onMins = int((workEnd - startTime).total_seconds() / 60.0)
-      timeLeft = int((jobEnd - workEnd).total_seconds() / 60.0)
-      offMins = 0
-      while timeLeft >= 1440:		#1440 mins per day
-        onMins += Elf.workHours * 60
-        offMins += Elf.breakHours * 60
-        timeLeft -= 1440
-      if timeLeft > Elf.breakHours * 60:
-        offMins += Elf.breakHours * 60
-        onMins += timeLeft - Elf.breakHours * 60
-        timeLeft = 0
-      else:
-        offMins += timeLeft
-        timeLeft = 0
-      return [onMins, offMins]
 
+
+  #Utilities
 
   def adjustProductivity(self, onMins, offMins):
-    onHours = onMins / 60.0
-    offHours = offMins / 60.0
-    newProd = self.prod * (1.02**onHours) * (.9**offHours)
+    """Adjust productivity based on how many minutes elf works during
+    sanctioned time, outside sanctioned time.
+    :param onMins: int minutes worked during sanctioned time
+    :param offMins: int minutes worked outside sanctioned time
+    """
+    onH = onMins / 60.0
+    offH = offMins / 60.0
+    newProd = self.prod*(Elf.prodIncRate**onH)*(Elf.prodDecRate**offH)
     newProd = min(newProd, Elf.maxProd)
     self.prod = max(newProd, Elf.minProd)
 

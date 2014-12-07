@@ -1,5 +1,7 @@
 from santaUtil import *
+import datetime as dt
 from WorkHours import *
+import math
 
 
 class Elf:
@@ -9,51 +11,42 @@ class Elf:
   prodIncRate = 1.02
   prodDecRate = .9
 
+
+  ##### Public Methods #####
+
   def __init__(self, ID, avail = dt.datetime(2014,1,1,9,0)):
     self.ID = ID
     self.prod = 1.0
     self.available = avail
 
   def workJob(self, duration, startTime):
-    if startTime < self.available or startTime > WorkHours.endOfDay(startTime.date()):
+    """Work a job of given duration at a given startTime, and update
+       internal state accordingly."""
+    if startTime < self.available:
       return False
-    jobTime = actualDuration(duration, self.prod)
-    [onMins, offMins] = self.getWorktimes(jobTime, startTime)
+    jobTime = int(math.ceil(duration/self.prod))
+    onMins = WorkHours.getApprovedMins(startTime, jobTime)
+    offMins = WorkHours.getNonapprovedMins(startTime, jobTime)
     self.adjustAvailability(onMins, offMins, startTime)
     self.adjustProductivity(onMins, offMins)
     return True
 
+
+
+
+  ##### Private Methods #####
+
   def adjustAvailability(self, onMins, offMins, startTime):
+    """Adjust availability based on a number of approved minutes and
+    a number of nonapproved minutes."""
     duration = onMins + offMins
-    endTime = addTime(duration, startTime)
-    nextAvailable = endTime
-    if endTime >= self.endOfDay(startTime.date()):
-      nextAvailable = self.nextMorning(endTime)
-      daysToAdd = offMins // 600
-      minsToAdd = offMins % 600
-      nextAvailable += dt.timedelta(days = daysToAdd)
-      nextAvailable = self.startOfDay(nextAvailable.date())
-      nextAvailable += dt.timedelta(minutes = minsToAdd)
-    self.available = nextAvailable
+    endTime = startTime + dt.timedelta(minutes = duration)
+    self.available = WorkHours.addApprovedMins(endTime, offMins)
 
-  def nextMorning(self, fromTime):
-    morning = dt.datetime.combine(fromTime.date(), Elf.dayStart)
-    if fromTime > morning:
-      morning = morning + dt.timedelta(days = 1)
-    return morning
-
-
-
-
-
-  #Utilities
 
   def adjustProductivity(self, onMins, offMins):
     """Adjust productivity based on how many minutes elf works during
-    sanctioned time, outside sanctioned time.
-    :param onMins: int minutes worked during sanctioned time
-    :param offMins: int minutes worked outside sanctioned time
-    """
+    sanctioned time, outside sanctioned time."""
     onH = onMins / 60.0
     offH = offMins / 60.0
     newProd = self.prod*(Elf.prodIncRate**onH)*(Elf.prodDecRate**offH)

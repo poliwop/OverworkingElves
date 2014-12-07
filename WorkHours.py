@@ -7,121 +7,142 @@ class WorkHours:
   workMins = 10*60
   breakMins = 14*60
 
+
+  ##### Public Methods #####
+
+  @staticmethod
+  def getApprovedMins(startTime, duration):
+    """Returns approved minutes in duration after startTime."""
+    endTime = startTime + dt.timedelta(minutes = duration)
+    return WorkHours.getOnMinutes(startTime, endTime)
+
+  @staticmethod
+  def getNonapprovedMins(startTime, duration):
+    """Returns nonapproved minutes in duration after startTime."""
+    return duration - WorkHours.getApprovedMins(startTime, duration)
+
+  @staticmethod
+  def addApprovedMins(startTime, duration):
+    """Adds approved minutes of length duration to startTime, returns
+       next approved minute."""
+    timeLeft = duration
+    currentTime = WorkHours.nextApproved(startTime)
+    while timeLeft > 0:
+      minsLeftToday = WorkHours.endOfDay(currentTime) - currentTime
+      minsAddToday = min(minsLeftToday, dt.timedelta(minutes = timeLeft))
+      currentTime = WorkHours.nextApproved(currentTime + minsAddToday)
+      timeLeft -= int(minsAddToday.total_seconds()/60.0)
+    return currentTime
+
+  @staticmethod
+  def nextApproved(startTime):
+    """Returns next approved time."""
+    next = startTime
+    if next < WorkHours.startOfDay(next):
+      next = WorkHours.startOfDay(next)
+    elif next >= WorkHours.endOfDay(next):
+      next = WorkHours.startOfDay(next + dt.timedelta(days = 1))
+    return next
+
+  @staticmethod
+  def isApproved(startTime):
+    """Indicates whether startTime is approved."""
+    lateEnough = (startTime >= WorkHours.startOfDay(startTime))
+    earlyEnough = (startTime < WorkHours.endOfDay(startTime))
+    return lateEnough and earlyEnough
+
   @staticmethod
   def startOfDay(day):
-    """:param day: date day
-       :return: datetime start of work on the day"""
+    """Returns start of workday on day as datetime."""
     return dt.datetime.combine(day, WorkHours.dayStart)
 
   @staticmethod
   def endOfDay(day):
-    """:param day: date day
-       :return: datetime end of work on the day"""
+    """Returns end of workday on day as datetime."""
     return dt.datetime.combine(day, WorkHours.dayEnd)
 
+
+
+
+  ##### Private Methods #####
+
   @staticmethod
-  def onSameDay(a, b):
-    """Checks if two datetimes are on same day, allowing midnight to be
-    counted as either day.
-    :param a: datetime
-    :param b: datetime
-    :return: boolean indicating whether a and b are same day
-    """
-    c = min(a, b)
-    d = max(a, b)
-    cMidnight = dt.datetime.combine(c.date()+dt.timedelta(days=1),dt.time(0,0))
-    return c.date() == d.date() or (d - c == cMidnight - c)
+  def getOnMinutes(startTime, endTime):
+    """Returns number of approved minutes in time interval."""
+    totalMins = 0
+    if startTime <= endTime:
+      currentDay = startTime.date()
+      while currentDay <= endTime.date():
+        #calc start time
+        thisMorning = dt.datetime.combine(currentDay, dt.time(0,0))
+        startHour = max(startTime, thisMorning)
+        #calc end time
+        thisNight = dt.datetime.combine(currentDay + dt.timedelta(days = 1),
+                                        dt.time(0,0))
+        endHour = min(endTime, thisNight)
+        #add on minutes for day
+        totalMins += WorkHours.getDayOnMinutes(startHour, endHour)
+        #update currentDay
+        currentDay = currentDay + dt.timedelta(days = 1)
+    return totalMins
+
+  @staticmethod
+  def getOffMinutes(startTime, endTime):
+    """Returns number of nonapproved minutes in time interval."""
+    offMins = 0
+    if startTime <= endTime:
+      totalMins = int((endTime - startTime).total_seconds()/60.0)
+      offMins = totalMins - WorkHours.getOnMinutes(startTime, endTime)
+    return offMins
+
+
+  @staticmethod
+  def getDayOnMinutes(startTime, endTime):
+    """Returns number of approved minutes in time interval, which must
+       be an interval on a single day."""
+    startToday = WorkHours.startOfDay(startTime.date())
+    endToday = WorkHours.endOfDay(startTime.date())
+    return WorkHours.timeIntIntersection(startTime, endTime,
+                                         startToday, endToday)
+
+  @staticmethod
+  def getDayOffMinutes(startTime, endTime):
+    """Returns number of nonapproved minutes in time interval, which must
+       be an interval on a single day."""
+    totalMins = int((endTime - startTime).total_seconds()/60.0)
+    onMins = WorkHours.getDayOnMinutes(startTime, endTime)
+    offMins = totalMins - onMins
+    if onMins == -1:
+      offMins = -1
+    return offMins
+
 
   @staticmethod
   def timeIntIntersection(a, b, c, d):
-    """ Takes two intervals of time, both of which must start and end
-    on the same day, and returns intersection in minutes.
-    :param a: datetime start of first interval
-    :param b: datetime end of first interval
-    :param c: datetime start of second interval
-    :param d: datetime end of second interval
-    :return: int minutes of intersection of intervals, -1 if input 
-    does not make sense
-    """
+    """Takes two time intervals and returns the length of the intersection,
+       in minutes, or -1 if the input does not make sense."""
     intMins = -1
     #check if intervals start on same day, make sense
-    if (a.date() == c.date()) and a < b and c < d:
+    if (a.date() == c.date()) and a <= b and c <= d:
       #check if intervals end on same day they start, or at midnight
       if WorkHours.onSameDay(a,b) and WorkHours.onSameDay(c,d):
         #check if intervals overlap at all
-        if a < d and b > c:
+        if a <= d and b >= c:
           tdMins = min(b - a, d - a, b - c, d - c)
           intMins = int(tdMins.total_seconds() / 60.0)
         else:
           intMins = 0
     return intMins
 
-  @staticmethod
-  def getDayOnMinutes(startTime, endTime):
-    """ Takes two times on same day, calculates the number of minutes
-    during approved working hours between them.
-    :param startTime: datetime start of interval
-    :param endTime: datetime end of interval
-    :return: int number of approved work minutes in interval, or -1
-    if given input is inappropriate.
-    """
-    startToday = WorkHours.startOfDay(startTime.date())
-    endToday = WorkHours.endOfDay(startTime.date())
-    return WorkHours.timeIntIntersection(startTime, endTime,
-                                         startToday, endToday)
-
-  '''
-  def getDayOffMinutes(startTime, endTime):
-    startToday = startOfDay(startTime.date())
-    endToday = endOfDay(startTime.date())
-    mornMidnight = dt.combine(startTime.date(), )
-    morningMins = timeIntIntersection(startTime, endTime,
-                                      dt.
-  '''
 
   @staticmethod
-  def getWorktimes(duration, startTime):
-    workEnd = WorkHours.endOfDay(startTime.date())
-    jobEnd = startTime + dt.timedelta(minutes = duration)
-    if jobEnd <= workEnd:
-      return [duration, 0]
-    else:
-      onMins = int((workEnd - startTime).total_seconds() / 60.0)
-      timeLeft = int((jobEnd - workEnd).total_seconds() / 60.0)
-      offMins = 0
-      while timeLeft >= 1440:		#1440 mins per day
-        onMins += Elf.workHours * 60
-        offMins += Elf.breakHours * 60
-        timeLeft -= 1440
-      if timeLeft > Elf.breakHours * 60:
-        offMins += Elf.breakHours * 60
-        onMins += timeLeft - Elf.breakHours * 60
-        timeLeft = 0
-      else:
-        offMins += timeLeft
-        timeLeft = 0
-      return [onMins, offMins]
+  def onSameDay(a, b):
+    """Checks if two datetimes are on the same day, where midnight can
+       be considered in either day."""
+    c = min(a, b)
+    d = max(a, b)
+    cMidnight = dt.datetime.combine(c.date()+dt.timedelta(days=1),dt.time(0,0))
+    return c.date() == d.date() or (d - c == cMidnight - c)
 
 
 
-
-'''
-  def getOnMins(startTime, endTime):
-
-    #If both are on same day:
-    
-
-    day = startTime.date()
-    startToday = max(startTime, WorkHours.startOfDay(day))
-    endToday = endTime
-    while endToday <= endTime:
-      endToday = WorkHours.endOfDay(day)
-      onMins = min(endToday - startToday, endTime - startToday)
-      day = day + dt.timedelta(days = 1)
-      startToday = WorkHours.startOfDay(day)
-    
-
-  
-
-  def getOffMins(starTime, endTime):
-'''

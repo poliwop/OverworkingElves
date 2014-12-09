@@ -5,15 +5,13 @@ import csv as csv
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch002.csv'
+solnFile = 'soln/grinch003.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-MAX_JOB_LEN = 47000
+MAX_JOB_LEN = 49000
 
 #JobsList methods
-
-
 
 
 
@@ -24,29 +22,52 @@ class JobAssigmentSimulator:
     self.elves = elves
     self.wr = wr
     self.assignments = []
-    self.prodBoostDiv = .95
-    self.prodHoldDiv = .85
+    self.multMin = .98
+    self.prodHoldDiv = .8418
 
   def assignJobs(self):
-    #Until jobs are all assigned,
-    i = 0
-    while jobs.length > 0:
-      elf = self.getNextElf()
-      jobList = self.assignJobRampToElf(elf)
-      self.assignments.extend(jobList)
-      i += 1
-      if i % 1000 == 0:
-        self.printUpdate()
+    print('Beginning Ramping Phase...')
+    self.rampPhase()
+    print('Beginning Minimum Productivity Phase...')
+    print('Min job length: ' + str(self.jobs.minJobLength))
+    self.minProdPhase()
     self.assignments = [x for x in self.assignments if x != []]
     self.assignments = sorted(self.assignments, key=itemgetter(2))
     lastAssign = self.assignments[-1]
     lastMin = int((lastAssign[2] - REF_DT).total_seconds()/60.0)
     self.writeAssignments(self.assignments)
     return lastMin*math.log(WORKFORCE + 1)
-      
+
+
+  def rampPhase(self):
+    bigJob = len(self.jobs.l) - 1
+    i = 0
+    while 4*bigJob > MAX_JOB_LEN:
+      bigJob = len(self.jobs.l) - 1
+      elf = self.getNextElf()
+      jobList = self.assignJobRampToElf(elf)
+      self.assignments.extend(jobList)
+      i += 1
+      if i % 10000 == 0:
+        self.printUpdate()
+
+  def minProdPhase(self):
+    currentDate = self.getNextElf().available
+    while self.jobs.length > 0:
+      for elf in self.elves:
+        while elf.available < WorkHours.endOfDay(currentDate) and self.jobs.length > 0:
+          bigJob = len(self.jobs.l) - 1
+          job = self.assignJobToElf(elf, bigJob, elf.available)
+          self.assignments.append(job)
+      currentDate = currentDate + dt.timedelta(days = 1)
+      if currentDate.day == 1 and currentDate.month == 1:
+        print("Happy " + str(currentDate.year) + "!")
+        jobsDone = 10000000 - self.jobs.length
+        print(str(jobsDone) + ' jobs done.')
+
+
   def printUpdate(self):
     print('jobs done: ' + str(10000000 - self.jobs.length))
-
     
   def assignJobRampToElf(self, elf):
     elfAssigns = []
@@ -58,14 +79,15 @@ class JobAssigmentSimulator:
     elfAssigns.append(self.assignJobToElf(elf, bigJob, elf.available))
     return elfAssigns
 
-
+  #Right now, this phase does NOT choose full days first, but rather .98 of
+  #full days. This would not be difficult to fix.
   def phaseRampFullDay(self, elf):
     jobList = []
     job = 0
     currentStart = elf.available
     while elf.prod < 4.0 and job != []:
       job = []
-      job = self.fillDayWithJob(elf, currentStart)
+      job = self.fillDayWithJob(elf, currentStart, 1, self.multMin)
       currentStart = elf.available
       if job != []:
         jobList.append(job)
@@ -87,7 +109,6 @@ class JobAssigmentSimulator:
         jobList.append(job)
     return jobList
 
-  #This definitely needs to be reexamined.
   def phaseHold(self, elf):
     jobList = []
     job = 0
@@ -111,11 +132,11 @@ class JobAssigmentSimulator:
 
 
 
-  def fillDayWithJob(self, elf, startTime, maxDiv = 1):
+  def fillDayWithJob(self, elf, startTime, maxDiv = 1, maxMult = 1):
     job = []
     timeLeft = WorkHours.timeLeftToday(startTime)
     restOfDayDur = timeLeft*elf.prod
-    dur = int(math.floor(restOfDayDur))
+    dur = int(math.floor(restOfDayDur*maxMult))
     restOfDayDurMax = int(math.floor(restOfDayDur/maxDiv))
     jobDur = self.jobs.getShortestDurIn(range(dur,restOfDayDurMax+1))
     if jobDur > 0:
@@ -144,8 +165,6 @@ class JobAssigmentSimulator:
       else:
         self.jobs.add(jobID, duration)
     return job
-
-
 
 
   # IO methods

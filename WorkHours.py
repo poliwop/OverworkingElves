@@ -41,7 +41,11 @@ class WorkHours:
     if next < WorkHours.startOfDay(next):
       next = WorkHours.startOfDay(next)
     elif next >= WorkHours.endOfDay(next):
-      next = WorkHours.startOfDay(next + dt.timedelta(days = 1))
+      try:
+        next = WorkHours.startOfDay(next + dt.timedelta(days = 1))
+      except OverflowError:
+        print('next: ' + str(next))
+        print('startTime: ' + str(startTime))
     return next
 
   @staticmethod
@@ -60,6 +64,11 @@ class WorkHours:
   def endOfDay(day):
     """Returns end of workday on day as datetime."""
     return dt.datetime.combine(day, WorkHours.dayEnd)
+
+  @staticmethod
+  def timeLeftToday(daytime):
+    timeLeft = WorkHours.endOfDay(daytime) - daytime
+    return max(0, int(timeLeft.total_seconds()/60.0))
 
 
 

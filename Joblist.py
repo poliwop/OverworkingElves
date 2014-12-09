@@ -19,6 +19,21 @@ class Joblist:
       self.updateMinJobAdd(duration)
 
 
+  def getShortestDurIn(self, durList):
+    durList.sort()
+    return self.getFirstDurIn(durList)
+
+  def getLongestDurIn(self, durList):
+    durList.sort(reverse = True)
+    return self.getFirstDurIn(durList)
+
+  def getFirstDurIn(self, durList):
+    for dur in durList:
+      if self.hasDuration(dur):
+        return dur
+    return False
+
+
   def get(self, duration):
     """ Removes of specified duration from list, if one exists, returns
     ID. Otherwise, returns False.
@@ -33,6 +48,13 @@ class Joblist:
         self.updateMinJobGet()
       self.length -= 1
     return job
+
+
+  def hasDurIn(self, durList):
+    has = False
+    for dur in durList:
+      has = has or self.hasDuration(dur)
+    return has
 
 
   def hasDuration(self, duration):

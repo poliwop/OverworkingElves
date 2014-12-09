@@ -5,11 +5,11 @@ import csv as csv
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/submission004.csv'
+solnFile = 'soln/grinch002.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-TARGET_JOB_LEN = 46300
+MAX_JOB_LEN = 47000
 
 #JobsList methods
 
@@ -23,14 +23,114 @@ class JobAssigmentSimulator:
     self.jobs = jobs
     self.elves = elves
     self.wr = wr
+    self.assignments = []
+    self.prodBoostDiv = .95
+    self.prodHoldDiv = .85
 
   def assignJobs(self):
-    elf = self.elves[0]
-    while jobs.length > 9500:
-      bj = len(self.jobs.l) - 1
-      job = self.assignJobToElf(elf,bj,elf.available)
+    #Until jobs are all assigned,
+    i = 0
+    while jobs.length > 0:
+      elf = self.getNextElf()
+      jobList = self.assignJobRampToElf(elf)
+      self.assignments.extend(jobList)
+      i += 1
+      if i % 1000 == 0:
+        self.printUpdate()
+    self.assignments = [x for x in self.assignments if x != []]
+    self.assignments = sorted(self.assignments, key=itemgetter(2))
+    lastAssign = self.assignments[-1]
+    lastMin = int((lastAssign[2] - REF_DT).total_seconds()/60.0)
+    self.writeAssignments(self.assignments)
+    return lastMin*math.log(WORKFORCE + 1)
+      
+  def printUpdate(self):
+    print('jobs done: ' + str(10000000 - self.jobs.length))
+
+    
+  def assignJobRampToElf(self, elf):
+    elfAssigns = []
+    bigJob = len(self.jobs.l) - 1
+    elfAssigns.extend(self.phaseRampFullDay(elf))
+    desiredProd = min(Elf.maxProd, bigJob / float(MAX_JOB_LEN))
+    elfAssigns.extend(self.phaseRampToProd(elf, desiredProd))
+    elfAssigns.extend(self.phaseHold(elf))
+    elfAssigns.append(self.assignJobToElf(elf, bigJob, elf.available))
+    return elfAssigns
+
+
+  def phaseRampFullDay(self, elf):
+    jobList = []
+    job = 0
+    currentStart = elf.available
+    while elf.prod < 4.0 and job != []:
+      job = []
+      job = self.fillDayWithJob(elf, currentStart)
+      currentStart = elf.available
       if job != []:
-        self.writeAssignments([job])
+        jobList.append(job)
+        tomorrow = currentStart + dt.timedelta(days = 1)
+        currentStart = WorkHours.startOfDay(tomorrow)
+    return jobList
+
+  def phaseRampToProd(self, elf, dProd):
+    jobList = []
+    job = []
+    currentStart = elf.available
+    while elf.prod < dProd and self.jobs.minJobLength <= 600*elf.prod:
+      job = self.doLongestJobToday(elf, currentStart)
+      currentStart = elf.available
+      if job == []:
+        tomorrow = currentStart + dt.timedelta(days = 1)
+        currentStart = WorkHours.startOfDay(tomorrow)
+      if job != []:
+        jobList.append(job)
+    return jobList
+
+  #This definitely needs to be reexamined.
+  def phaseHold(self, elf):
+    jobList = []
+    job = 0
+    job = []
+    currentStart = elf.available
+    if currentStart != WorkHours.startOfDay(currentStart):
+      tomorrow = currentStart + dt.timedelta(days = 1)
+      currentStart = WorkHours.startOfDay(tomorrow)
+    job = self.doLongestJobToday(elf, currentStart, self.prodHoldDiv)
+    if job != []:
+      jobList.append(job)
+    return jobList
+
+
+  def getNextElf(self):
+    next = self.elves[0]
+    for elf in self.elves[1:]:
+      if elf.available < next.available:
+        next = elf
+    return next
+
+
+
+  def fillDayWithJob(self, elf, startTime, maxDiv = 1):
+    job = []
+    timeLeft = WorkHours.timeLeftToday(startTime)
+    restOfDayDur = timeLeft*elf.prod
+    dur = int(math.floor(restOfDayDur))
+    restOfDayDurMax = int(math.floor(restOfDayDur/maxDiv))
+    jobDur = self.jobs.getShortestDurIn(range(dur,restOfDayDurMax+1))
+    if jobDur > 0:
+      job = self.assignJobToElf(elf, jobDur, startTime)
+    return job
+
+
+  def doLongestJobToday(self, elf, startTime, maxDiv = 1):
+    job = []
+    timeLeft = WorkHours.timeLeftToday(startTime)
+    maxDur = int(math.floor(timeLeft*elf.prod/maxDiv))
+    jobDur = self.jobs.getLongestDurIn(range(0,maxDur + 1))
+    if jobDur > 0:
+      job = self.assignJobToElf(elf, jobDur, startTime)
+    return job
 
 
 
@@ -39,8 +139,10 @@ class JobAssigmentSimulator:
     jobID = self.jobs.get(duration)
     if jobID > 0:
       realDur = int(math.ceil(duration/elf.prod))
-      elf.workJob(duration, startTime)
-      job = [jobID, elf.ID, startTime, realDur]
+      if elf.workJob(duration, startTime):
+        job = [jobID, elf.ID, startTime, realDur]
+      else:
+        self.jobs.add(jobID, duration)
     return job
 
 
@@ -52,6 +154,8 @@ class JobAssigmentSimulator:
     for job in assignmentList:
       job[2] = toDateString(job[2])
       self.wr.writerow(job)
+
+
 
 
 
@@ -72,15 +176,17 @@ if __name__ == '__main__':
     elves = []
     firstAvail = WorkHours.startOfDay(START_DATE)
     for i in range(WORKFORCE):
-      elves.append(Elf(i, firstAvail))
+      elves.append(Elf(i + 1, firstAvail))
 
-    '''
+
     print("Reading in toys list...")
     for toy in toyReader:    
       jobs.add(int(toy[0]), int(toy[2]))
     print("Done.")
-    '''
 
+
+
+    '''
     ####   Testing code   ####
     print("Reading in toys list...")
     for i in range(10000):
@@ -88,7 +194,7 @@ if __name__ == '__main__':
       jobs.add(int(toy[0]), int(toy[2]))
     print("Done.")
     ##########################
-
+    '''
     
 
     with open(solnFile, 'wb') as w:
@@ -96,6 +202,7 @@ if __name__ == '__main__':
       solnWriter.writerow(['ToyId', 'ElfId', 'StartTime', 'Duration'])
 
       jobAssignSim = JobAssigmentSimulator(jobs, elves, solnWriter)
-      jobAssignSim.assignJobs()
+      score = jobAssignSim.assignJobs()
+      print("Score: " + str(score))
 
 

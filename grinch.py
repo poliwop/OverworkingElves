@@ -5,11 +5,11 @@ import csv as csv
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch003.csv'
+solnFile = 'soln/grinch006.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-MAX_JOB_LEN = 49000
+MAX_JOB_LEN = 46500
 
 #JobsList methods
 
@@ -23,7 +23,7 @@ class JobAssigmentSimulator:
     self.wr = wr
     self.assignments = []
     self.multMin = .98
-    self.prodHoldDiv = .8418
+    self.prodHoldMult = 1.1879
 
   def assignJobs(self):
     print('Beginning Ramping Phase...')
@@ -100,7 +100,7 @@ class JobAssigmentSimulator:
     job = []
     currentStart = elf.available
     while elf.prod < dProd and self.jobs.minJobLength <= 600*elf.prod:
-      job = self.doLongestJobToday(elf, currentStart)
+      job = self.fillDayWithJob(elf, currentStart, 1, 0)
       currentStart = elf.available
       if job == []:
         tomorrow = currentStart + dt.timedelta(days = 1)
@@ -117,7 +117,7 @@ class JobAssigmentSimulator:
     if currentStart != WorkHours.startOfDay(currentStart):
       tomorrow = currentStart + dt.timedelta(days = 1)
       currentStart = WorkHours.startOfDay(tomorrow)
-    job = self.doLongestJobToday(elf, currentStart, self.prodHoldDiv)
+    job = self.fillDayWithJob(elf, currentStart, self.prodHoldMult)
     if job != []:
       jobList.append(job)
     return jobList
@@ -132,18 +132,18 @@ class JobAssigmentSimulator:
 
 
 
-  def fillDayWithJob(self, elf, startTime, maxDiv = 1, maxMult = 1):
+  def fillDayWithJob(self, elf, startTime, maxMult = 1, minMult = 1):
     job = []
     timeLeft = WorkHours.timeLeftToday(startTime)
     restOfDayDur = timeLeft*elf.prod
-    dur = int(math.floor(restOfDayDur*maxMult))
-    restOfDayDurMax = int(math.floor(restOfDayDur/maxDiv))
-    jobDur = self.jobs.getShortestDurIn(range(dur,restOfDayDurMax+1))
+    dur = int(math.floor(restOfDayDur*minMult))
+    restOfDayDurMax = int(math.floor(restOfDayDur*maxMult))
+    jobDur = self.jobs.getLongestDurIn(range(dur,restOfDayDurMax+1))
     if jobDur > 0:
       job = self.assignJobToElf(elf, jobDur, startTime)
     return job
 
-
+  '''
   def doLongestJobToday(self, elf, startTime, maxDiv = 1):
     job = []
     timeLeft = WorkHours.timeLeftToday(startTime)
@@ -152,7 +152,7 @@ class JobAssigmentSimulator:
     if jobDur > 0:
       job = self.assignJobToElf(elf, jobDur, startTime)
     return job
-
+  '''
 
 
   def assignJobToElf(self, elf, duration, startTime):

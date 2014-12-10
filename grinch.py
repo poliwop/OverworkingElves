@@ -5,7 +5,7 @@ import csv as csv
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch008.csv'
+solnFile = 'soln/grinch009.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -22,7 +22,7 @@ class JobAssigmentSimulator:
     self.elves = elves
     self.wr = wr
     self.assignments = []
-    self.multMin = .98
+    self.multMin = .97
     self.prodHoldMult = 1.1879
 
   def assignJobs(self):

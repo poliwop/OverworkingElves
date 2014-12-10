@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-solnFile = 'soln/grinch004.csv'
+solnFile = 'soln/grinch008.csv'
 toyFile = 'data/toys_rev2.csv'
 solnData = pd.read_csv(solnFile)
 del solnData['ElfId']
@@ -11,7 +11,7 @@ del toysData['Arrival_time']
 data = solnData.merge(toysData, on = 'ToyId')
 sortedData = data.sort(columns='Duration')
 #testData = data
-subData = sortedData[::1000]
+subData = sortedData[::500]
 subData.plot(kind = 'scatter', x = 'Duration', y = 'Realtime')
 
 

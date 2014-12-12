@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-solnFile = 'soln/grinch008.csv'
+solnFile = 'soln/grinch015.csv'
 toyFile = 'data/toys_rev2.csv'
 solnData = pd.read_csv(solnFile)
 del solnData['ElfId']
@@ -14,6 +14,7 @@ sortedData = data.sort(columns='Duration')
 subData = sortedData[::500]
 subData.plot(kind = 'scatter', x = 'Duration', y = 'Realtime')
 
+earlyData = sortedData[0:2000000][::100]
 
 secondData = sortedData[1000000:1100000]
 

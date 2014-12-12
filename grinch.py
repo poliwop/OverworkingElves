@@ -2,14 +2,15 @@ from Joblist import *
 from Elf import *
 import numpy as np
 import csv as csv
+import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch009.csv'
+solnFile = 'soln/grinch016.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-MAX_JOB_LEN = 46200
+MAX_JOB_LEN = 44900
 
 #JobsList methods
 
@@ -50,6 +51,7 @@ class JobAssigmentSimulator:
       i += 1
       if i % 10000 == 0:
         self.printUpdate()
+        
 
   def minProdPhase(self):
     currentDate = self.getNextElf().available
@@ -75,12 +77,12 @@ class JobAssigmentSimulator:
     elfAssigns.extend(self.phaseRampFullDay(elf))
     desiredProd = min(Elf.maxProd, bigJob / float(MAX_JOB_LEN))
     elfAssigns.extend(self.phaseRampToProd(elf, desiredProd))
-    elfAssigns.extend(self.phaseHold(elf))
+    elfAssigns.extend(self.phaseDecay(elf, bigJob))
+#    elfAssigns.extend(self.phaseHold(elf))
     elfAssigns.append(self.assignJobToElf(elf, bigJob, elf.available))
     return elfAssigns
 
-  #Right now, this phase does NOT choose full days first, but rather .98 of
-  #full days. This would not be difficult to fix.
+
   def phaseRampFullDay(self, elf):
     jobList = []
     job = 0
@@ -100,7 +102,9 @@ class JobAssigmentSimulator:
     job = []
     currentStart = elf.available
     while elf.prod < dProd and self.jobs.minJobLength <= 600*elf.prod:
-      job = self.fillDayWithJob(elf, currentStart, 1, 0)
+      job = self.shortestJobToProd(elf, currentStart, dProd)
+      if job == []:
+        job = self.fillDayWithJob(elf, currentStart, 1, 0)
       currentStart = elf.available
       if job == []:
         tomorrow = currentStart + dt.timedelta(days = 1)
@@ -109,9 +113,25 @@ class JobAssigmentSimulator:
         jobList.append(job)
     return jobList
 
-  def phaseHold(self, elf):
+  def phaseDecay(self, elf, bigJob):
     jobList = []
     job = 0
+    startProd = elf.prod
+    while job != []:
+      job = []
+      timeLeft = WorkHours.timeLeftToday(elf.available)
+      desDur = getOptimalProdDecayDur(elf.prod, timeLeft, bigJob)
+      if desDur > startProd*600:
+        maxDur = int(math.ceil(desDur*1.2))
+        jobDur = self.jobs.getShortestDurIn(range(desDur, maxDur))
+        if jobDur > 0:
+          job = self.assignJobToElf(elf, jobDur, elf.available)
+        if job != []:
+          jobList.append(job)
+    return jobList
+
+  def phaseHold(self, elf):
+    jobList = []
     job = []
     currentStart = elf.available
     if currentStart != WorkHours.startOfDay(currentStart):
@@ -130,6 +150,9 @@ class JobAssigmentSimulator:
         next = elf
     return next
 
+  def getRandomElf(self):
+    return random.choice(elves)
+
 
 
   def fillDayWithJob(self, elf, startTime, maxMult = 1, minMult = 1):
@@ -142,6 +165,26 @@ class JobAssigmentSimulator:
     if jobDur > 0:
       job = self.assignJobToElf(elf, jobDur, startTime)
     return job
+
+  def shortestJobToProd(self, elf, startTime, dProd):
+    job = []
+    timeLeft = WorkHours.timeLeftToday(startTime)
+    restOfDayDur = int(math.floor(timeLeft*elf.prod))
+    desWorkTime = self.getTimeToProd(elf.prod, dProd)
+    dur = int(math.ceil(desWorkTime*elf.prod))
+    if dur > restOfDayDur:
+      job = self.fillDayWithJob(elf, startTime, 1, 0)
+    else:
+      jobDur = self.jobs.getShortestDurIn(range(dur, restOfDayDur + 1))
+      if jobDur > 0:
+        job = self.assignJobToElf(elf, jobDur, startTime)
+    return job
+
+  def getTimeToProd(self, prod, dProd):
+    return int(math.ceil(60*math.log(dProd/prod)/math.log(Elf.prodIncRate)))
+
+
+
 
   '''
   def doLongestJobToday(self, elf, startTime, maxDiv = 1):
@@ -175,6 +218,16 @@ class JobAssigmentSimulator:
       self.wr.writerow(job)
 
 
+def getOptimalProdDecayDur(C, T, L):
+  #C is the current producitivy, T the time left in workday,
+  #L the length of the biggest job.
+  firstNumer = (1 - C/Elf.minProd)*(Elf.prodIncRate**(T/60.0))*60*C
+  firstDenom = L*math.log(.9)
+  if firstNumer/firstDenom > 0:
+    termTwo = 60*C*math.log(firstNumer/firstDenom)/math.log(.9)
+    return int(math.ceil(C*T - termTwo))
+  else:
+    return -1
 
 
 

@@ -6,7 +6,7 @@ import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch016.csv'
+solnFile = 'soln/grinch019.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -23,7 +23,7 @@ class JobAssigmentSimulator:
     self.elves = elves
     self.wr = wr
     self.assignments = []
-    self.multMin = .97
+    self.multMin = .99
     self.prodHoldMult = 1.1879
 
   def assignJobs(self):
@@ -46,11 +46,14 @@ class JobAssigmentSimulator:
     while 4*bigJob > MAX_JOB_LEN:
       bigJob = len(self.jobs.l) - 1
       elf = self.getNextElf()
-      jobList = self.assignJobRampToElf(elf)
+      #jobList = self.assignJobRampToElf(elf)
+      jobList = self.assignVariableRampToElf(elf)
       self.assignments.extend(jobList)
       i += 1
       if i % 10000 == 0:
         self.printUpdate()
+#      if i % 100000 == 0:
+#        break
         
 
   def minProdPhase(self):
@@ -70,6 +73,118 @@ class JobAssigmentSimulator:
 
   def printUpdate(self):
     print('jobs done: ' + str(10000000 - self.jobs.length))
+
+  def assignVariableRampToElf(self, elf):
+    elfAssigns = []
+    elfAssigns.extend(self.phaseRampFullDay(elf))
+    elfAssigns.extend(self.phaseGetToBigJob(elf))
+    
+#    elfAssigns.extend(self.phaseAssignBigJob(elf))
+    return elfAssigns
+
+  def phaseGetToBigJob(self, elf):
+    bigAssigned = False
+    smallJobsLeft = True
+    jobs = 0
+    jobList = []
+    bigJob = len(self.jobs.l) - 1
+    while jobs != [[]] and not(bigAssigned) and self.jobs.length > 0:
+      #Get duration for better big job. If prod level isn't high enough,
+      #ramp up and then loop.
+      jobs = [[]]
+      bigJob = len(self.jobs.l) - 1
+      bigJobDur = self.bestBigJobDur(elf)
+      desiredProd = min(Elf.maxProd, bigJobDur / float(MAX_JOB_LEN))
+      desiredProd = max(desiredProd, Elf.minProd)
+      if desiredProd > elf.prod:
+        jobs = [self.doProdRaiseJob(elf, elf.available, desiredProd)]
+      elif bigJob != bigJobDur:
+        jobs = self.doLittleBigJob(elf, bigJobDur)
+        bigAssigned = True
+      if jobs == [[]]:
+        jobs = [self.assignJobToElf(elf, bigJob, elf.available)]
+        bigAssigned = True
+      jobList.extend(jobs)
+    return jobList
+
+  def bestBigJobDur(self, elf):
+    #Check if it's better to do biggest job or little big job
+    #Return duration of biggest job or little big job accordingly
+    bigJob = len(self.jobs.l) - 1
+    desDur = getOptimalProdDecayDur(elf.prod, 600, bigJob)
+    littleBigDur = self.jobs.getShortestDurIn(range(desDur, bigJob + 1))
+    if checkGoodProdDecayDur(elf.prod, 600, bigJob, littleBigDur):
+      return littleBigDur
+    else:
+      return bigJob
+
+  def doLittleBigJob(self, elf, dur):
+    jobList = self.fillDayWithJobs(elf, elf.available)
+    startTime = elf.available
+    if startTime != WorkHours.startOfDay(startTime):
+      tomorrow = currentStart + dt.timedelta(days = 1)
+      startTime = WorkHours.startOfDay(tomorrow)
+    job = self.assignJobToElf(elf, dur, startTime)
+    if job != []:
+      jobList.append(job)
+    return jobList
+  '''
+  def isBestToDoBigJob(self, elf):
+    bigJob = len(self.jobs.l) - 1
+    desDur = getOptimalProdDecayDur(elf.prod, 600, bigJob)
+    if checkGoodProdDecayDur(elf.prod, 600, bigJob, desDur):
+      return False
+    else:
+      return True
+  '''
+
+  '''
+  def phaseAssignBigJob(self, elf):
+    bigAssigned = False
+    smallJobsLeft = True
+    job = 0
+    jobList = []
+    #  Loop until big job assigned: Get best big job dur
+    #  If prod is not big enough to get under MaxTime, do little job
+    #  and loop back.
+    while job != [] and not(bigAssigned) and self.jobs.length > 0:
+      bestBigDur = self.getBestBigJobDuration(elf)
+      desiredProd = min(Elf.maxProd, bestBigDur / float(MAX_JOB_LEN))
+      desiredProd = max(desiredProd, Elf.minProd)
+      if desiredProd > elf.prod:
+        job = self.doProdRaiseJob(elf, elf.available, desiredProd)
+#        print('Raising productivity!')
+      else:
+        maxDur = len(self.jobs.l)
+        jobDur = self.jobs.getShortestDurIn(range(bestBigDur, maxDur))
+        job = self.assignJobToElf(elf, jobDur, elf.available)
+        bigAssigned = True
+#        print('Assigning big job!')
+#        print('bestBigDur: ' + str(bestBigDur))
+      if job != []:
+        jobList.append(job)
+    return jobList
+
+
+  def getBestBigJobDuration(self, elf):
+    bigJob = len(self.jobs.l) - 1
+    timeLeft = WorkHours.timeLeftToday(elf.available)
+    desDur = getOptimalProdDecayDur(elf.prod, timeLeft, bigJob)
+    if checkGoodProdDecayDur(elf.prod, timeLeft, bigJob, desDur):
+      return desDur
+    else:
+      return bigJob
+  '''
+
+  def doProdRaiseJob(self, elf, startTime, dProd, tryNextDay = True):
+    job = self.shortestJobToProd(elf, startTime, dProd)
+    if job == []:
+      job = self.fillDayWithJob(elf, startTime, 1, 0)
+      if job == [] and tryNextDay:
+        tomorrow = startTime + dt.timedelta(days = 1)
+        currentStart = WorkHours.startOfDay(tomorrow)
+        job = self.doProdRaiseJob(elf, currentStart, dProd, False)
+    return job
     
   def assignJobRampToElf(self, elf):
     elfAssigns = []
@@ -154,6 +269,17 @@ class JobAssigmentSimulator:
     return random.choice(elves)
 
 
+  def fillDayWithJobs(self, elf, startTime):
+    jobList = []
+    job = 0
+    while job != [] and elf.available.date() == startTime.date():
+      job = self.fillDayWithJob(elf, elf.available, 1, 0)
+      if job != []:
+        jobList.append(job)
+    return jobList
+      
+
+
 
   def fillDayWithJob(self, elf, startTime, maxMult = 1, minMult = 1):
     job = []
@@ -217,15 +343,22 @@ class JobAssigmentSimulator:
       job[2] = toDateString(job[2])
       self.wr.writerow(job)
 
+def checkGoodProdDecayDur(C, T, L, S, d = 0):
+  incExp = -T/60.0 - 10*d
+  decExp = -S/(60.0*C) + T/60.0 + 10*d
+  Lmult = 1 - Elf.prodIncRate**(incExp)*.9**(decExp)
+  Smult = 1 - C/Elf.minProd
+  return L*Lmult > S*Smult and 600 < S/C
 
-def getOptimalProdDecayDur(C, T, L):
+
+def getOptimalProdDecayDur(C, T, L, d = 0):
   #C is the current producitivy, T the time left in workday,
   #L the length of the biggest job.
-  firstNumer = (1 - C/Elf.minProd)*(Elf.prodIncRate**(T/60.0))*60*C
+  firstNumer = (1 - C/Elf.minProd)*(Elf.prodIncRate**(T/60.0 + 10*d))*60*C
   firstDenom = L*math.log(.9)
   if firstNumer/firstDenom > 0:
     termTwo = 60*C*math.log(firstNumer/firstDenom)/math.log(.9)
-    return int(math.ceil(C*T - termTwo))
+    return int(math.ceil(C*T + 600*C*d - termTwo))
   else:
     return -1
 

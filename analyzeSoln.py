@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-solnFile = 'soln/grinch015.csv'
+solnFile = 'soln/grinch019.csv'
 toyFile = 'data/toys_rev2.csv'
 solnData = pd.read_csv(solnFile)
 del solnData['ElfId']

@@ -6,11 +6,13 @@ import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = 'soln/grinch019.csv'
+solnFile = 'soln/grinch020.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-MAX_JOB_LEN = 44900
+MAX_JOB_LEN = 45500
+NUMOFTOYS = 10000000
+MAX_TOY_LEN = 48000
 
 #JobsList methods
 
@@ -330,7 +332,7 @@ class JobAssigmentSimulator:
     if jobID > 0:
       realDur = int(math.ceil(duration/elf.prod))
       if elf.workJob(duration, startTime):
-        job = [jobID, elf.ID, startTime, realDur]
+        job = (jobID, elf.ID, startTime, realDur)
       else:
         self.jobs.add(jobID, duration)
     return job

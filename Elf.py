@@ -13,10 +13,11 @@ class Elf:
 
   ##### Public Methods #####
 
-  def __init__(self, ID, avail = dt.datetime(2014,1,1,9,0)):
+  def __init__(self, ID, avail = dt.datetime(2014,1,1,9,0), doBigJob = True):
     self.ID = ID
     self.prod = 1.0
     self.available = avail
+    self.doBigJob = doBigJob
 
   def workJob(self, duration, startTime):
     """Work a job of given duration at a given startTime, and update

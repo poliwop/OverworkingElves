@@ -7,7 +7,7 @@ import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = '/home/colin/Desktop/soln/grinch2_015.csv'
+solnFile = '/home/colin/Desktop/soln/grinch2_016.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -28,7 +28,7 @@ class JobAssigmentSimulator:
     #self.assignments = []
     self.multMin = .99
     self.prodHoldMult = 1.1879
-    self.littleBigJobMaxMult = 1.1
+    self.littleBigJobMaxMult = 1.05
     self.littleBigJobMinMult = 1.0
     self.lastWorkingMinute = REF_DT
 
@@ -169,9 +169,11 @@ class JobAssigmentSimulator:
     #Return duration of biggest job or little big job accordingly
     bigJob = self.jobs.maxLength
     optDur = getOptimalProdDecayDur(elf.prod, 600, bigJob)
-    maxDesDur = int(math.ceil(optDur*self.littleBigJobMaxMult))
-    minDesDur = int(math.floor(optDur*self.littleBigJobMinMult))
-    littleBigDur = self.jobs.getLongestDurIn(minDesDur, maxDesDur)
+    desDur = int(math.floor(optDur*self.littleBigJobMaxMult))
+    #maxDesDur = int(math.ceil(optDur*self.littleBigJobMaxMult))
+    #minDesDur = int(math.floor(optDur*self.littleBigJobMinMult))
+    maxDur = int(math.ceil(5000*self.littleBigJobMaxMult))
+    littleBigDur = self.jobs.getShortestDurIn(desDur, maxDur)
     if checkGoodProdDecayDur(elf.prod, 600, bigJob, littleBigDur):
       return littleBigDur
     else:

@@ -38,7 +38,7 @@ class Joblist:
 #    return first(range(maxim, minim - 1, -1), key = self.l.__getitem__,
 #                 default = False)
     for dur in range(maxim, minim - 1, -1):
-      if len(self.l[dur]) > 0:
+      if self.l[dur]:
         return dur
     return False
 
@@ -48,7 +48,7 @@ class Joblist:
 #    return first(range(minim, maxim + 1), key = self.l.__getitem__,
 #                 default = False)
     for dur in range(minim, maxim + 1):
-      if len(self.l[dur]) > 0:
+      if self.l[dur]:
         return dur
     return False
 

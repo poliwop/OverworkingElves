@@ -7,11 +7,11 @@ import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = '/home/colin/Desktop/soln/grinch2_021.csv'
+solnFile = '/home/colin/Desktop/soln/grinch2_023.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
-MAX_JOB_LEN = 44900
+MAX_JOB_LEN = 45000
 NUMOFTOYS = 10000000
 
 

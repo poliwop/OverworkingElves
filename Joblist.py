@@ -33,7 +33,7 @@ class Joblist:
   '''
 
   def getLongestDurIn(self, mini, maxi):
-    maxim = min(maxi, len(self.l) - 1)
+    maxim = min(maxi, self.maxLength)
     minim = max(mini, 1)
 #    return first(range(maxim, minim - 1, -1), key = self.l.__getitem__,
 #                 default = False)
@@ -43,13 +43,35 @@ class Joblist:
     return False
 
   def getShortestDurIn(self, mini, maxi):
-    maxim = min(maxi, len(self.l) - 1)
+    maxim = min(maxi, self.maxLength)
     minim = max(mini, 1)
 #    return first(range(minim, maxim + 1), key = self.l.__getitem__,
 #                 default = False)
     for dur in range(minim, maxim + 1):
       if self.l[dur]:
         return dur
+    return False
+
+
+  def getClosestDurTo(self, desDur, mini = 1, maxi = -1):
+    if maxi == -1:
+      maxi = self.maxLength
+    bothRange = range(min(maxi - desDur, desDur - mini) + 1)
+    for i in bothRange:
+      if self.l[desDur + i]:
+        return desDur + i
+      if self.l[desDur - i]:
+        return desDur - i
+    if maxi - desDur > desDur - mini:
+      upperRange = range(desDur - mini + 1, maxi - desDur + 1)
+      for i in upperRange:
+        if self.l[desDur + i]:
+          return desDur + i
+    else:
+      lowerRange = range(maxi - desDur + 1, desDur - mini + 1)
+      for i in lowerRange:
+        if self.l[desDur - i]:
+          return desDur - i
     return False
 
   '''

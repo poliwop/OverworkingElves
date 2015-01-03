@@ -7,7 +7,7 @@ import random
 from operator import itemgetter
 
 toyFile = 'data/toys_rev2.csv'
-solnFile = '/home/colin/Desktop/soln/grinch2_018.csv'
+solnFile = '/home/colin/Desktop/soln/grinch2_021.csv'
 WORKFORCE = 900
 REF_DT = dt.datetime(2014,1,1,0,0)
 START_DATE = dt.date(2014,12,11)
@@ -29,7 +29,7 @@ class JobAssigmentSimulator:
     self.multMin = .99
     self.prodHoldMult = 1.1879
     self.littleBigJobMaxMult = 1.0
-    self.littleBigJobMinMult = 1.0
+    #self.littleBigJobMinMult = 1.0
     self.lastWorkingMinute = REF_DT
 
 
@@ -76,7 +76,7 @@ class JobAssigmentSimulator:
     while self.jobs.length > 0:
       for elf in self.elves:
         while elf.available < WorkHours.endOfDay(today) and self.jobs.length > 0:
-          self.assignJobToElf(elf, jobs.maxLength, elf.available)
+          self.assignJobToElf(elf, jobs.minLength, elf.available)
       today = today + dt.timedelta(days = 1)
       if today.day == 1 and today.month == 1:
         print("Happy " + str(today.year) + "!")
@@ -173,6 +173,7 @@ class JobAssigmentSimulator:
     if not(checkGoodProdDecayDur(elf.prod, 600, bigJob, desDur)):
       return bigJob
     maxDur = int(math.ceil(5000*self.littleBigJobMaxMult))
+    minDur = int(math.floor(600*elf.prod)) + 1
     littleBigDur = self.jobs.getShortestDurIn(desDur, maxDur)
     if checkGoodProdDecayDur(elf.prod, 600, bigJob, littleBigDur):
       return littleBigDur

@@ -21,3 +21,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with OverworkingElves.  If not, see <http://www.gnu.org/licenses/>.
+
+Colin Grove can be reached at grove.colin@gmail.com.

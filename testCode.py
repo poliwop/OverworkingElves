@@ -1,3 +1,8 @@
+'''
+OverworkingElves: a solution to the Kaggle 2014 Christmas optimization competition.
+Copyright 2014 Colin Grove. See README for more info.
+'''
+
 def testFunctionCases(function, cases, prec=7):
   passed = True
   errStr = ""
